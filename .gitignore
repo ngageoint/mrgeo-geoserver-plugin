@@ -1,0 +1,17 @@
+# build artifacts
+**/target
+**/**/target
+
+
+# all IntelliJ generated files
+.idea
+**/.idea
+**/**/.idea
+
+*.iml
+**/*.iml
+**/**/*.iml
+
+*.eml
+**/*.eml
+**/**/*.eml
