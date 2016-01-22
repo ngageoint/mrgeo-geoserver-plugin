@@ -34,7 +34,7 @@ import org.mrgeo.data.DataProviderFactory;
 import org.mrgeo.data.ProviderProperties;
 import org.mrgeo.data.image.MrsImageDataProvider;
 import org.mrgeo.image.ImageStats;
-import org.mrgeo.image.MrsImagePyramidMetadata;
+import org.mrgeo.image.MrsPyramidMetadata;
 import org.mrgeo.utils.LongRectangle;
 import org.mrgeo.utils.TMSUtils;
 import org.opengis.coverage.SampleDimensionType;
@@ -173,7 +173,7 @@ private void updateCoverages(Catalog catalog, CoverageStoreInfo csi)
     for (String newImage: newImages)
     {
       final MrsImageDataProvider dp = DataProviderFactory.getMrsImageDataProvider(newImage, DataProviderFactory.AccessMode.READ, providerProperties);
-      final MrsImagePyramidMetadata meta = dp.getMetadataReader().read();
+      final MrsPyramidMetadata meta = dp.getMetadataReader().read();
 
       int zoom = meta.getMaxZoomLevel();
 
