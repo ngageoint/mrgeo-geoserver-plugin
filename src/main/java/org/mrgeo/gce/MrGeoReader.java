@@ -34,8 +34,8 @@ import org.mrgeo.data.ProviderProperties;
 import org.mrgeo.data.image.MrsImageDataProvider;
 import org.mrgeo.data.raster.RasterUtils;
 import org.mrgeo.image.MrsImage;
-import org.mrgeo.image.MrsImagePyramid;
-import org.mrgeo.image.MrsImagePyramidMetadata;
+import org.mrgeo.image.MrsPyramid;
+import org.mrgeo.image.MrsPyramidMetadata;
 import org.mrgeo.image.RasterTileMerger;
 import org.mrgeo.utils.Bounds;
 import org.mrgeo.utils.LongRectangle;
@@ -163,7 +163,7 @@ public GridCoverage2D read(String coverageName, GeneralParameterValue[] paramete
 
   MrsImageDataProvider dp = DataProviderFactory
       .getMrsImageDataProvider(coverageName, DataProviderFactory.AccessMode.READ, providerProperties);
-  final MrsImagePyramidMetadata meta = dp.getMetadataReader().read();
+  final MrsPyramidMetadata meta = dp.getMetadataReader().read();
 
   final int tilesize = meta.getTilesize();
   final TMSUtils.Bounds bounds;
@@ -187,7 +187,7 @@ public GridCoverage2D read(String coverageName, GeneralParameterValue[] paramete
 
   log.fine("Zoom: " + zoom);
   log.fine("Bounds: " + bounds.toString());
-  final MrsImagePyramid pyramid = MrsImagePyramid.open(dp);
+  final MrsPyramid pyramid = MrsPyramid.open(dp);
 
   final MrsImage image;
   if (pyramid.hasPyramids() && zoom <= meta.getMaxZoomLevel() && zoom > 0)
@@ -262,7 +262,7 @@ public double[] getReadingResolutions(String coverageName, OverviewPolicy policy
     // calculate the actual resolution we'll use for the reading
     MrsImageDataProvider dp = DataProviderFactory
         .getMrsImageDataProvider(coverageName, DataProviderFactory.AccessMode.READ, providerProperties);
-    final MrsImagePyramidMetadata meta = dp.getMetadataReader().read();
+    final MrsPyramidMetadata meta = dp.getMetadataReader().read();
 
     final int tilesize = meta.getTilesize();
     int zoom = Math.max(TMSUtils.zoomForPixelSize(requestedResolution[0], tilesize), TMSUtils.zoomForPixelSize(requestedResolution[1], tilesize));
@@ -282,7 +282,7 @@ public GridEnvelope getOriginalGridRange(String coverageName)
   {
     MrsImageDataProvider dp = DataProviderFactory
         .getMrsImageDataProvider(coverageName, DataProviderFactory.AccessMode.READ, providerProperties);
-    MrsImagePyramidMetadata meta = dp.getMetadataReader().read();
+    MrsPyramidMetadata meta = dp.getMetadataReader().read();
 
     LongRectangle bounds = meta.getPixelBounds(meta.getMaxZoomLevel());
 
@@ -311,7 +311,7 @@ public GeneralEnvelope getOriginalEnvelope(String coverageName)
   try
   {
     MrsImageDataProvider dp = DataProviderFactory.getMrsImageDataProvider(coverageName, DataProviderFactory.AccessMode.READ, providerProperties);
-    MrsImagePyramidMetadata meta = dp.getMetadataReader().read();
+    MrsPyramidMetadata meta = dp.getMetadataReader().read();
 
     Bounds bounds = meta.getBounds();
 
