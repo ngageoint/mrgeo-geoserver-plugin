@@ -22,23 +22,16 @@
     <format>dir</format>
   </formats>
   <includeBaseDirectory>false</includeBaseDirectory>
-  <dependencySets>
-    <!-- mrgeo jars -->
-    <dependencySet>
-      <outputDirectory>.</outputDirectory>
-      <outputFileNameMapping>${artifact.artifactId}-${mrgeo.version}${dashClassifier?}.${artifact.extension}</outputFileNameMapping>
-      <useProjectArtifact>false</useProjectArtifact>
-      <unpack>false</unpack>
-      <scope>runtime</scope>
-      <includes>
-        <include>org.mrgeo:*:jar:*</include>
-      </includes>
-    </dependencySet>
-  </dependencySets>
   <fileSets>
     <fileSet>
       <directory>${project.build.directory}/lib</directory>
-      <outputDirectory>lib</outputDirectory>
+      <outputDirectory>.</outputDirectory>
     </fileSet>
   </fileSets>
+  <files>
+      <file>
+        <source>${project.build.directory}/gt-mrgeo-${project.version}-${mrgeo.version}.jar</source>
+        <outputDirectory>.</outputDirectory>
+      </file>
+  </files>
 </assembly>

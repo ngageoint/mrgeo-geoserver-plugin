@@ -132,7 +132,7 @@ public AbstractGridCoverage2DReader getReader(Object source, Hints hints)
     }
   }
 
-  log.severe("Can't create MrGeoReader.  (config: " + (configfile == null ? "null" : source.toString()) + ")");
+  log.severe("Can't create MrGeoReader.  (config: " + (configfile == null ? "null" : configfile.toURI().toString()) + ")");
   return null;
 }
 

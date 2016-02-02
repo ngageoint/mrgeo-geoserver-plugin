@@ -227,6 +227,8 @@ public GridCoverage2D read(String coverageName, GeneralParameterValue[] paramete
     log.fine("Raw raster: x: " + merged.getMinX() + " y: " + merged.getMinY() + " w: " + merged.getWidth() + " h: " +
         merged.getHeight());
 
+    log.fine("Cropping to: x: " + offsetX + " y: " + offsetY + " w: " + croppedW + " h: " + croppedH);
+
     final WritableRaster cropped = merged.createCompatibleWritableRaster(croppedW, croppedH);
     cropped.setDataElements(0, 0, croppedW, croppedH, merged.getDataElements(offsetX, offsetY, croppedW, croppedH, null));
 
@@ -243,9 +245,17 @@ public GridCoverage2D read(String coverageName, GeneralParameterValue[] paramete
     final GridCoverageFactory factory = CoverageFactoryFinder.getGridCoverageFactory(null);
     return factory.create(pyramid.getName(), img, envelope);
   }
+  catch (Exception e)
+  {
+    e.printStackTrace();
+    throw e;
+  }
   finally
   {
-    image.close();
+    if (image != null)
+    {
+      image.close();
+    }
   }
 }
 

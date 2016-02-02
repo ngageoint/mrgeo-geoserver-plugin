@@ -92,11 +92,12 @@ public void run()
   long start = System.currentTimeMillis();
 
   boolean done = false;
+
   while (!done)
   {
     try
     {
-      log.fine("update layers: " + (int)((System.currentTimeMillis() - start) / 1000));
+      log.fine("update layers: " + (int) ((System.currentTimeMillis() - start) / 1000));
 
       // get the catalog
       Catalog catalog = (Catalog) GeoServerExtensions.bean("catalog");
@@ -110,10 +111,19 @@ public void run()
         {
           updateCoverages(catalog, csi);
         }
+        else
+        {
+          log.warning("can't access coverage store");
+        }
+      }
+      else
+      {
+        log.warning("can't access catalog");
       }
 
       // check here, bacause we need to run through all the setup once...
-      if (config.getProperty(MrGeoLayerUpdater.ENABLE_UPDATE, "false").equals("false")) {
+      if (config.getProperty(MrGeoLayerUpdater.ENABLE_UPDATE, "false").equals("false"))
+      {
         done = true;
       }
       else
@@ -169,6 +179,8 @@ private void updateCoverages(Catalog catalog, CoverageStoreInfo csi)
 
       log.info("Adding namespace: " + namespace);
     }
+
+    CatalogFacade facade = catalog.getFacade();
 
     for (String newImage: newImages)
     {
@@ -288,7 +300,13 @@ private void updateCoverages(Catalog catalog, CoverageStoreInfo csi)
       {
         log.info("Adding Coverage: " + meta.getPyramid());
 
-        catalog.add(ci);
+        // NOTE:  There is a bug in GeoServer (at least the 2.8.x versions) where the add w/ CoverageInfo
+        // isn't performing the synchronize on it's facade.  Luckly, I can get the facade (it is above) and
+        // sync here.  It works like a charm!
+        synchronized (facade)
+        {
+          catalog.add(ci);
+        }
 
         LayerInfoImpl li = (LayerInfoImpl) catalog.getFactory().createLayer();
         li.setResource(ci);

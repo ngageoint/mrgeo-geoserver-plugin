@@ -18,11 +18,19 @@
 
 package org.mrgeo.gce;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.platform.GeoServerResourceLoader;
 import org.geotools.coverage.grid.io.AbstractGridFormat;
 import org.geotools.coverage.grid.io.GridFormatFactorySpi;
 import org.geotools.util.logging.Logging;
+import org.mrgeo.core.MrGeoConstants;
+import org.mrgeo.core.MrGeoProperties;
+import org.mrgeo.hdfs.utils.HadoopFileUtils;
+import org.mrgeo.utils.LoggingUtils;
 
 import java.awt.*;
 import java.io.File;
@@ -31,6 +39,7 @@ import java.io.InputStream;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class MrGeoFormatFactorySpi implements GridFormatFactorySpi
@@ -47,10 +56,79 @@ public MrGeoFormatFactorySpi()
 {
   try
   {
+    LoggingUtils.setLogLevel("org.mrgeo", LoggingUtils.DEBUG);
+    if (log.isLoggable(Level.FINE))
+    {
+      try
+      {
+        log.fine("MrGeo environment:");
+        String env = System.getenv("MRGEO_HOME");
+        log.fine("  MRGEO_HOME: " + ((env == null) ? "null" : env));
+        env = System.getenv("HADOOP_CONF_DIR");
+        log.fine("  HADOOP_CONF_DIR: " + ((env == null) ? "null" : env));
+        FileSystem fs = HadoopFileUtils.getFileSystem();
+        log.fine("  Default hadoop filesystem: " + ((fs == null) ? "null" : fs.getClass().getSimpleName()));
+
+        if (fs != null)
+        {
+          String dir = MrGeoProperties.getInstance().getProperty(MrGeoConstants.MRGEO_HDFS_IMAGE, "/mrgeo/images");
+            try
+            {
+              log.fine("  Files in " + dir + ":");
+              fs = HadoopFileUtils.getFileSystem(new Path(dir));
+              log.fine("      (" + fs.getClass().getSimpleName() + ")");
+
+              FileStatus[] files = fs.listStatus(new Path(dir));
+              if (files == null)
+              {
+                log.fine("    <none>");
+              }
+              else
+              {
+                for (FileStatus file : files)
+                {
+                  log.fine("    " + file.toString());
+                }
+              }
+            }
+            catch (Exception e)
+            {
+              log.severe("Exception while getting files:");
+              log.severe(e.getMessage());
+              logstack(e);
+              e.printStackTrace();
+            }
+            catch (Throwable t)
+            {
+              log.severe("Throwable (exception) while getting files:");
+              log.severe(t.toString());
+              logstack(t);
+              t.printStackTrace();
+            }
+          }
+      }
+      catch (Exception e)
+      {
+        log.severe("Exception while getting environment:");
+        log.severe(e.getMessage());
+
+        logstack(e);
+        e.printStackTrace();
+      }
+      catch (Throwable t)
+      {
+        log.severe("Throwable (exception) while getting environment:");
+        log.severe(t.toString());
+        logstack(t);
+        t.printStackTrace();
+      }
+
+    }
+
     GeoServerResourceLoader loader = (GeoServerResourceLoader) GeoServerExtensions.bean("resourceLoader");
     File file = loader.find(CONFIG_FILE);
 
-    if (file.exists())
+    if (file != null && file.exists())
     {
       InputStream in = new FileInputStream(file);
       config.load(in);
@@ -62,10 +140,48 @@ public MrGeoFormatFactorySpi()
         updater = new MrGeoLayerUpdater(config);
       }
     }
+    else
+    {
+      log.warning("Can't find the MrGeo config file: " + CONFIG_FILE);
+    }
   }
-  catch (Exception ignored)
+  catch (Exception e)
   {
+    log.severe("Exception in constructor:");
+    log.severe(e.getMessage());
+    logstack(e);
 
+    e.printStackTrace();
+  }
+  catch (Throwable t)
+  {
+    log.severe("Throwable (exception) in constructor:");
+    log.severe(t.getMessage());
+    logstack(t);
+
+    t.printStackTrace();
+  }
+  finally
+  {
+    log.fine("Made it to the end of the constructor (" + this.getClass().getSimpleName() + ")");
+  }
+}
+
+private static void logstack(Throwable t)
+{
+  StackTraceElement[] st = t.getStackTrace();
+  boolean first = true;
+  for (StackTraceElement tr: st)
+  {
+    if (first)
+    {
+      first = false;
+      log.severe(tr.toString());
+    }
+    else
+    {
+      log.severe("  " + tr.toString());
+    }
   }
 }
 
