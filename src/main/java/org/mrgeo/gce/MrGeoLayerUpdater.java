@@ -27,7 +27,7 @@ import org.geotools.coverage.grid.GeneralGridEnvelope;
 import org.geotools.coverage.grid.GridGeometry2D;
 import org.geotools.geometry.GeneralEnvelope;
 import org.geotools.geometry.jts.ReferencedEnvelope;
-import org.geotools.referencing.crs.DefaultGeographicCRS;
+import org.geotools.referencing.CRS;
 import org.geotools.util.NumberRange;
 import org.geotools.util.logging.Logging;
 import org.mrgeo.data.DataProviderFactory;
@@ -39,6 +39,9 @@ import org.mrgeo.utils.LongRectangle;
 import org.mrgeo.utils.TMSUtils;
 import org.opengis.coverage.SampleDimensionType;
 import org.opengis.coverage.grid.GridGeometry;
+import org.opengis.referencing.FactoryException;
+import org.opengis.referencing.NoSuchAuthorityCodeException;
+import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
 import java.awt.*;
 import java.awt.image.DataBuffer;
@@ -198,9 +201,12 @@ private void updateCoverages(Catalog catalog, CoverageStoreInfo csi)
 
       TMSUtils.Bounds bounds = meta.getBounds().getTMSBounds();
 
+      String epsg = "EPSG:4326";
+      CoordinateReferenceSystem epsg4326 = CRS.decode(epsg);
+
       final GeneralEnvelope croppedEnvelope = new GeneralEnvelope(
           new double[] { bounds.w, bounds.s }, new double[] { bounds.e, bounds.n });
-      croppedEnvelope.setCoordinateReferenceSystem(DefaultGeographicCRS.WGS84);
+      croppedEnvelope.setCoordinateReferenceSystem(epsg4326);
 
       LongRectangle lr = meta.getPixelBounds(zoom);
 
@@ -217,17 +223,19 @@ private void updateCoverages(Catalog catalog, CoverageStoreInfo csi)
       ci.setDescription("");
       ci.setNamespace(nsi);
 
-      ReferencedEnvelope bb = ReferencedEnvelope.create(croppedEnvelope, DefaultGeographicCRS.WGS84);
+      ReferencedEnvelope bb = ReferencedEnvelope.create(croppedEnvelope, epsg4326);
       ci.setLatLonBoundingBox(bb);
       ci.setNativeBoundingBox(bb);
-      ci.setNativeCRS(DefaultGeographicCRS.WGS84);
-      ci.setProjectionPolicy(ProjectionPolicy.FORCE_DECLARED);
-      ci.setSRS("EPSG:4326");
+      ci.setNativeCRS(bb.getCoordinateReferenceSystem());
+
+      ci.setProjectionPolicy(ProjectionPolicy.REPROJECT_TO_DECLARED);
+      ci.setSRS(epsg);
       ci.setStore(csi);
       ci.setTitle(meta.getPyramid());
+      ci.setDescription("Created from MrGeo image " + dp.getResourceName());
+
 
       ci.setNativeFormat("GEOTIFF");
-
 
       LinkedList<String> fmtList = new LinkedList<>();
       fmtList.add("GIF");
@@ -311,11 +319,24 @@ private void updateCoverages(Catalog catalog, CoverageStoreInfo csi)
         LayerInfoImpl li = (LayerInfoImpl) catalog.getFactory().createLayer();
         li.setResource(ci);
         li.setEnabled(true);
+        // li.setAdvertised(true);  This is ignored in the code...
         li.setName(ci.getName());
         li.setType(PublishedType.RASTER);
         li.setPath("/");
         StyleInfo style = new CatalogBuilder(catalog).getDefaultStyle(li.getResource());
         li.setDefaultStyle(style);
+
+//        li.setAbstract();
+//        li.setAttribution();
+//        li.setAuthorityURLs();
+//        li.setId();
+//        li.setIdentifiers();
+//        li.setLegend();
+//        li.setMetadata();
+//        li.setOpaque();
+//        li.setQueryable();
+//        li.setStyles();
+//        li.setTitle();
 
         valid = catalog.validate(li, true);
         if (valid.isValid())
@@ -351,6 +372,14 @@ private void updateCoverages(Catalog catalog, CoverageStoreInfo csi)
 
   }
   catch (IOException e)
+  {
+    e.printStackTrace();
+  }
+  catch (NoSuchAuthorityCodeException e)
+  {
+    e.printStackTrace();
+  }
+  catch (FactoryException e)
   {
     e.printStackTrace();
   }

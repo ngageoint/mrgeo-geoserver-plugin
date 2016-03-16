@@ -19,6 +19,7 @@
 package org.mrgeo.gce;
 
 import it.geosolutions.imageio.maskband.DatasetLayout;
+import it.geosolutions.imageio.maskband.DefaultDatasetLayoutImpl;
 import org.geotools.coverage.CoverageFactoryFinder;
 import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.coverage.grid.GridCoverageFactory;
@@ -27,11 +28,12 @@ import org.geotools.coverage.grid.GridGeometry2D;
 import org.geotools.coverage.grid.io.*;
 import org.geotools.geometry.GeneralEnvelope;
 import org.geotools.geometry.jts.ReferencedEnvelope;
-import org.geotools.referencing.crs.DefaultGeographicCRS;
+import org.geotools.referencing.CRS;
 import org.geotools.util.logging.Logging;
 import org.mrgeo.data.DataProviderFactory;
 import org.mrgeo.data.ProviderProperties;
 import org.mrgeo.data.image.MrsImageDataProvider;
+import org.mrgeo.data.image.MrsImageReader;
 import org.mrgeo.data.raster.RasterUtils;
 import org.mrgeo.image.MrsImage;
 import org.mrgeo.image.MrsPyramid;
@@ -45,16 +47,16 @@ import org.opengis.coverage.grid.GridEnvelope;
 import org.opengis.parameter.GeneralParameterValue;
 import org.opengis.parameter.ParameterDescriptor;
 import org.opengis.parameter.ParameterValue;
+import org.opengis.referencing.FactoryException;
 import org.opengis.referencing.ReferenceIdentifier;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
 import javax.media.jai.ImageLayout;
 import java.awt.*;
-import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.awt.image.Raster;
-import java.awt.image.RenderedImage;
 import java.awt.image.WritableRaster;
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.*;
 import java.util.List;
@@ -74,9 +76,22 @@ ProviderProperties providerProperties = ProviderProperties.fromDelimitedString("
 
 Set<String> layers = new HashSet<>();
 
+CoordinateReferenceSystem epsg4326 = null;
+
 public MrGeoReader(Properties config) throws IOException
 {
   this.config = config;
+
+  String epsg = "EPSG:4326";
+  try
+  {
+    epsg4326 = CRS.decode(epsg);
+  }
+  catch (FactoryException e)
+  {
+    e.printStackTrace();
+  }
+
 
   providerProperties = new ProviderProperties(config.getProperty(USERNAME, ""), config.getProperty(USER_ROLES, ""));
 
@@ -104,9 +119,11 @@ public Format getFormat()
 }
 
 @Override
-protected boolean checkName(String coverageName)
+protected boolean checkName(String name)
 {
-  return layers.contains(coverageName);
+  log.fine("Checking for coverage: " + name  + (layers.contains(name) ? " FOUND" : " NOT FOUND"));
+
+  return layers.contains(name);
 }
 
 @Override
@@ -116,9 +133,13 @@ public GridCoverage2D read(GeneralParameterValue[] parameters) throws IOExceptio
 }
 
 @Override
-public GridCoverage2D read(String coverageName, GeneralParameterValue[] parameters) throws IOException
+public GridCoverage2D read(String name, GeneralParameterValue[] parameters) throws IOException
 {
-  log.info("Reading coverage: " + coverageName);
+  log.fine("Reading coverage: " + name);
+
+  if (!checkName(name)) {
+    throw new IllegalArgumentException("The specified coverage " + name + "is not found");
+  }
 
   ReferencedEnvelope requestedEnvelope = null;
   Rectangle dim = null;
@@ -127,16 +148,16 @@ public GridCoverage2D read(String coverageName, GeneralParameterValue[] paramete
     for (GeneralParameterValue parameter : parameters)
     {
       final ParameterValue param = (ParameterValue) parameter;
-      final ReferenceIdentifier name = param.getDescriptor().getName();
-      if (name.equals(AbstractGridFormat.READ_GRIDGEOMETRY2D.getName()))
+      final ReferenceIdentifier riname = param.getDescriptor().getName();
+      if (riname.equals(AbstractGridFormat.READ_GRIDGEOMETRY2D.getName()))
       {
         final GridGeometry2D gg = (GridGeometry2D) param.getValue();
         try
         {
           requestedEnvelope = ReferencedEnvelope.create(gg.getEnvelope(), gg.getCoordinateReferenceSystem());
-          if (!gg.getCoordinateReferenceSystem().getName().equals(DefaultGeographicCRS.WGS84.getName()))
+          if (!gg.getCoordinateReferenceSystem().getName().equals(epsg4326.getName()))
           {
-            requestedEnvelope = requestedEnvelope.transform(DefaultGeographicCRS.WGS84, true);
+            requestedEnvelope = requestedEnvelope.transform(epsg4326, true);
           }
         }
         catch (Exception e)
@@ -162,7 +183,7 @@ public GridCoverage2D read(String coverageName, GeneralParameterValue[] paramete
   }
 
   MrsImageDataProvider dp = DataProviderFactory
-      .getMrsImageDataProvider(coverageName, DataProviderFactory.AccessMode.READ, providerProperties);
+      .getMrsImageDataProvider(name, DataProviderFactory.AccessMode.READ, providerProperties);
   final MrsPyramidMetadata meta = dp.getMetadataReader().read();
 
   final int tilesize = meta.getTilesize();
@@ -177,7 +198,7 @@ public GridCoverage2D read(String coverageName, GeneralParameterValue[] paramete
   }
   else
   {
-    bounds = new TMSUtils.Bounds(requestedEnvelope.getMinX(), requestedEnvelope.getMinY(), requestedEnvelope.getMaxX(), requestedEnvelope.getMaxY());
+    bounds = TMSUtils.limit(new TMSUtils.Bounds(requestedEnvelope.getMinX(), requestedEnvelope.getMinY(), requestedEnvelope.getMaxX(), requestedEnvelope.getMaxY()));
 
     double pw = bounds.width() / dim.getWidth();
     double ph = bounds.height() / dim.getHeight();
@@ -203,6 +224,7 @@ public GridCoverage2D read(String coverageName, GeneralParameterValue[] paramete
   try
   {
     TMSUtils.TileBounds tb = TMSUtils.boundsToTile(bounds, zoom, tilesize);
+    log.fine("Tile Bounds: " + tb.toString());
 
     Raster merged = RasterTileMerger.mergeTiles(image, tb);
 
@@ -224,6 +246,33 @@ public GridCoverage2D read(String coverageName, GeneralParameterValue[] paramete
     int croppedW = (int) (requestedLR.px - requestedUL.px);
     int croppedH = (int) (requestedLR.py - requestedUL.py);
 
+    log.fine("Original Crop values: x: " + offsetX + " y: " + offsetY + " w: " + croppedW + " h: " + croppedH);
+
+
+    if (offsetX < 0)
+    {
+      offsetX = 0;
+      bounds.w = actualBounds.w;
+    }
+
+    if (offsetY < 0)
+    {
+      offsetY = 0;
+      bounds.n = actualBounds.n;
+    }
+
+    if (offsetX + croppedW > merged.getWidth())
+    {
+      bounds.e = actualBounds.e;
+      croppedW = merged.getWidth() - offsetX;
+    }
+
+    if (offsetY + croppedH > merged.getHeight())
+    {
+      bounds.s = actualBounds.s;
+      croppedH = merged.getHeight() - offsetY;
+    }
+
     log.fine("Raw raster: x: " + merged.getMinX() + " y: " + merged.getMinY() + " w: " + merged.getWidth() + " h: " +
         merged.getHeight());
 
@@ -238,7 +287,7 @@ public GridCoverage2D read(String coverageName, GeneralParameterValue[] paramete
 
     final GeneralEnvelope envelope = new GeneralEnvelope(new double[] { bounds.w, bounds.s },
         new double[] { bounds.e, bounds.n});
-    envelope.setCoordinateReferenceSystem(DefaultGeographicCRS.WGS84);
+    envelope.setCoordinateReferenceSystem(epsg4326);
 
     final BufferedImage img = RasterUtils.makeBufferedImage(cropped);
 
@@ -260,18 +309,25 @@ public GridCoverage2D read(String coverageName, GeneralParameterValue[] paramete
 }
 
 @Override
-public double[] getReadingResolutions(String coverageName, OverviewPolicy policy, double[] requestedResolution)
+public double[] getReadingResolutions(String name, OverviewPolicy policy, double[] requestedResolution)
     throws IOException
 {
+
+  log.fine("Calculating Reading Resolutions for: " + name);
+
+  if (!checkName(name)) {
+    throw new IllegalArgumentException("The specified coverage " + name + "is not found");
+  }
+
   if (requestedResolution == null || requestedResolution.length != 2 )
   {
-    return super.getReadingResolutions(coverageName, policy, requestedResolution);
+    throw new IllegalArgumentException("Error calculating resolutions " + name);
   }
   else
   {
     // calculate the actual resolution we'll use for the reading
     MrsImageDataProvider dp = DataProviderFactory
-        .getMrsImageDataProvider(coverageName, DataProviderFactory.AccessMode.READ, providerProperties);
+        .getMrsImageDataProvider(name, DataProviderFactory.AccessMode.READ, providerProperties);
     final MrsPyramidMetadata meta = dp.getMetadataReader().read();
 
     final int tilesize = meta.getTilesize();
@@ -279,22 +335,32 @@ public double[] getReadingResolutions(String coverageName, OverviewPolicy policy
 
     double res = TMSUtils.resolution(zoom, tilesize);
 
+    log.fine("Reading Resolutions for: " + name + " " + res);
+
     return new double[]{res, res};
   }
 
 }
 
 @Override
-public GridEnvelope getOriginalGridRange(String coverageName)
+public GridEnvelope getOriginalGridRange(String name)
 {
+  log.fine("Getting Grid Range for: " + name);
+
+  if (!checkName(name)) {
+    throw new IllegalArgumentException("The specified coverage " + name + "is not found");
+  }
+
   // get the pixel size of the base image
   try
   {
     MrsImageDataProvider dp = DataProviderFactory
-        .getMrsImageDataProvider(coverageName, DataProviderFactory.AccessMode.READ, providerProperties);
+        .getMrsImageDataProvider(name, DataProviderFactory.AccessMode.READ, providerProperties);
     MrsPyramidMetadata meta = dp.getMetadataReader().read();
 
     LongRectangle bounds = meta.getPixelBounds(meta.getMaxZoomLevel());
+
+    log.fine("Grid Range for: " + name + " is " + bounds.toString());
 
     return new GridEnvelope2D((int)bounds.getMinX(), (int)bounds.getMinY(), (int)bounds.getMaxX(), (int)bounds.getMaxY());
   }
@@ -308,26 +374,41 @@ public GridEnvelope getOriginalGridRange(String coverageName)
 }
 
 @Override
-public CoordinateReferenceSystem getCoordinateReferenceSystem(String coverageName)
+public CoordinateReferenceSystem getCoordinateReferenceSystem(String name)
 {
+  log.fine("Getting CRS for: " + name);
+
+  if (!checkName(name)) {
+    throw new IllegalArgumentException("The specified coverage " + name + "is not found");
+  }
+
   // images are always WGS-84
-  return DefaultGeographicCRS.WGS84;
+  return epsg4326;
+
 }
 
 @Override
-public GeneralEnvelope getOriginalEnvelope(String coverageName)
+public GeneralEnvelope getOriginalEnvelope(String name)
 {
+  log.fine("Getting Envelope for: " + name);
+
+  if (!checkName(name)) {
+    throw new IllegalArgumentException("The specified coverage " + name + "is not found");
+  }
+
   // get bounds
   try
   {
-    MrsImageDataProvider dp = DataProviderFactory.getMrsImageDataProvider(coverageName, DataProviderFactory.AccessMode.READ, providerProperties);
+    MrsImageDataProvider dp = DataProviderFactory.getMrsImageDataProvider(name, DataProviderFactory.AccessMode.READ, providerProperties);
     MrsPyramidMetadata meta = dp.getMetadataReader().read();
 
     Bounds bounds = meta.getBounds();
 
     final GeneralEnvelope envelope = new GeneralEnvelope(new double[] { bounds.getMinX(), bounds.getMinY() },
         new double[] { bounds.getMaxX(), bounds.getMaxY()});
-    envelope.setCoordinateReferenceSystem(DefaultGeographicCRS.WGS84);
+    envelope.setCoordinateReferenceSystem(epsg4326);
+
+    log.fine("Envelope for: " + name + " is " + envelope.toString());
 
     return envelope;
   }
@@ -343,81 +424,231 @@ public GeneralEnvelope getOriginalEnvelope(String coverageName)
 @Override
 public String[] getGridCoverageNames()
 {
+  log.fine("Getting coverage names for MrGeo");
+
   return layers.toArray(new String[layers.size()]);
 }
 
+
+
+
+
 @Override
-public String[] getMetadataNames(String coverageName)
+public String[] getMetadataNames(String name)
 {
-  // no metadata, use the super version
-  return super.getMetadataNames(coverageName);
+  log.fine("Getting metadata names for: " + name);
+
+  if (!checkName(name)) {
+    throw new IllegalArgumentException("The specified coverage " + name + "is not found");
+  }
+
+  return new String[]{};
 }
 
 @Override
 public String getMetadataValue(String coverageName, String name)
 {
-  // no metadata, use the super version
-  return super.getMetadataValue(coverageName, name);
+  log.fine("Getting metadata value for: " + coverageName + ": " + name);
+
+  if (!checkName(coverageName)) {
+    throw new IllegalArgumentException("The specified coverage " + coverageName + "is not found");
+  }
+
+  return null;
+}
+
+@Override
+public Set<ParameterDescriptor<List>> getDynamicParameters(String name) throws IOException
+{
+  log.fine("Getting dynamic parameters for: " + name);
+
+  if (!checkName(name)) {
+    throw new IllegalArgumentException("The specified coverage " + name + "is not found");
+  }
+
+  return new HashSet<ParameterDescriptor<List>>();
+}
+
+@Override
+public DatasetLayout getDatasetLayout(String name)
+{
+  log.fine("Getting dataset layout for: " + name);
+
+  if (!checkName(name)) {
+    throw new IllegalArgumentException("The specified coverage " + name + "is not found");
+  }
+
+  return new DefaultDatasetLayoutImpl();
+}
+
+@Override
+public GridEnvelope getOverviewGridEnvelope(String name, int overviewIndex) throws IOException
+{
+  log.fine("Getting Overview Grid Range for: " + name);
+
+  if (!checkName(name)) {
+    throw new IllegalArgumentException("The specified coverage " + name + "is not found");
+  }
+
+  // get the pixel size of the base image
+  try
+  {
+    MrsImageDataProvider dp = DataProviderFactory
+        .getMrsImageDataProvider(name, DataProviderFactory.AccessMode.READ, providerProperties);
+    MrsPyramidMetadata meta = dp.getMetadataReader().read();
+
+    LongRectangle bounds = meta.getPixelBounds(overviewIndex);
+
+    log.fine("Overview Grid Range for: " + name + " is " + bounds.toString());
+
+    return new GridEnvelope2D((int)bounds.getMinX(), (int)bounds.getMinY(), (int)bounds.getMaxX(), (int)bounds.getMaxY());
+  }
+  catch (IOException e)
+  {
+    e.printStackTrace();
+  }
+
+  return null;
+}
+
+@Override
+public ImageLayout getImageLayout(String name) throws IOException
+{
+  log.fine("Getting JAI layout for: " + name);
+
+  if (!checkName(name)) {
+    throw new IllegalArgumentException("The specified coverage " + name + "is not found");
+  }
+
+  // get the pixel size of the base image
+  try
+  {
+    MrsImageDataProvider dp = DataProviderFactory
+        .getMrsImageDataProvider(name, DataProviderFactory.AccessMode.READ, providerProperties);
+    MrsPyramidMetadata meta = dp.getMetadataReader().read();
+
+    LongRectangle bounds = meta.getPixelBounds(meta.getMaxZoomLevel());
+
+    ImageLayout layout = new ImageLayout();
+    layout.setMinX(0);
+    layout.setMinY(0);
+    layout.setWidth((int)bounds.getWidth());
+    layout.setHeight((int)bounds.getHeight());
+
+    // only 1 tile!
+    layout.setTileGridXOffset(0);
+    layout.setTileGridYOffset(0);
+
+    layout.setTileWidth((int)bounds.getWidth());
+    layout.setTileHeight((int)bounds.getHeight());
+
+    MrsImageReader r = dp.getMrsTileReader(meta.getMaxZoomLevel());
+
+    final Iterator<Raster> it = r.get();
+    try
+    {
+      Raster raster = it.next();
+
+      layout.setColorModel(RasterUtils.createColorModel(raster));
+      layout.setSampleModel(raster.getSampleModel());
+    }
+    finally
+    {
+      if (!r.canBeCached() && it instanceof Closeable)
+      {
+        ((Closeable) it).close();
+        r.close();
+        r = null;
+      }
+    }
+
+    return layout;
+  }
+  catch (IOException e)
+  {
+    e.printStackTrace();
+  }
+
+  return null;
+
+}
+
+@Override
+public double[][] getResolutionLevels(String name) throws IOException
+{
+  log.fine("Getting resolution levels for: " + name);
+
+  if (!checkName(name)) {
+    throw new IllegalArgumentException("The specified coverage " + name + "is not found");
+  }
+
+  final double[][] resolutions = new double[1][2];
+  double[] hres = getHighestRes(name);
+
+  resolutions[0][0] = hres[0];
+  resolutions[0][1] = hres[1];
+
+  return resolutions;
+}
+
+@Override
+public GroundControlPoints getGroundControlPoints(String name)
+{
+  log.fine("Getting ground control points for: " + name);
+
+  if (!checkName(name)) {
+    throw new IllegalArgumentException("The specified coverage " + name + "is not found");
+  }
+
+  return null;
+}
+
+@Override
+protected double[] getHighestRes(String name)
+{
+  log.fine("Getting highest resolution for : " + name);
+
+  if (!checkName(name)) {
+    throw new IllegalArgumentException("The specified coverage " + name + "is not found");
+  }
+
+  try
+  {
+    MrsImageDataProvider dp = DataProviderFactory
+        .getMrsImageDataProvider(name, DataProviderFactory.AccessMode.READ, providerProperties);
+    MrsPyramidMetadata meta = dp.getMetadataReader().read();
+
+    double res = TMSUtils.resolution(meta.getMaxZoomLevel(), meta.getTilesize());
+
+    log.fine("Highest resolution for: " + name + " " + res);
+
+    return new double[]{res, res};
+  }
+  catch (IOException e)
+  {
+    e.printStackTrace();
+  }
+
+  return null;
 }
 
 @Override
 public int getGridCoverageCount()
 {
+  log.fine("Getting coverage count for MrGeo: " + layers.size());
+
   return layers.size();
 }
 
 @Override
-public Set<ParameterDescriptor<List>> getDynamicParameters(String coverageName) throws IOException
+public int getNumOverviews(String name)
 {
-  // no dynamic parameters, use the super version
-  return super.getDynamicParameters(coverageName);
-}
+  if (!checkName(name)) {
+    throw new IllegalArgumentException("The specified coverage " + name + "is not found");
+  }
+  log.fine("Getting num overviews for: " + name);
 
-@Override
-public int getNumOverviews(String coverageName)
-{
   return 0;
 }
 
-@Override
-public DatasetLayout getDatasetLayout(String coverageName)
-{
-  return super.getDatasetLayout(coverageName);
-}
-
-@Override
-public GridEnvelope getOverviewGridEnvelope(String coverageName, int overviewIndex) throws IOException
-{
-  return super.getOverviewGridEnvelope(coverageName, overviewIndex);
-}
-
-@Override
-public ImageLayout getImageLayout(String coverageName) throws IOException
-{
-  return super.getImageLayout(coverageName);
-}
-
-@Override
-public double[][] getResolutionLevels(String coverageName) throws IOException
-{
-  return super.getResolutionLevels(coverageName);
-}
-
-@Override
-protected double[] getHighestRes(String coverageName)
-{
-  return super.getHighestRes(coverageName);
-}
-
-@Override
-public GroundControlPoints getGroundControlPoints(String coverageName)
-{
-  return super.getGroundControlPoints(coverageName);
-}
-
-@Override
-protected AffineTransform getRescaledRasterToModel(RenderedImage coverageRaster)
-{
-  return super.getRescaledRasterToModel(coverageRaster);
-}
 }
