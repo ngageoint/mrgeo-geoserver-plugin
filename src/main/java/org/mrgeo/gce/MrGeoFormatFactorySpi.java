@@ -56,7 +56,7 @@ public MrGeoFormatFactorySpi()
 {
   try
   {
-    LoggingUtils.setLogLevel("org.mrgeo", LoggingUtils.DEBUG);
+    //LoggingUtils.setLogLevel("org.mrgeo", LoggingUtils.DEBUG);
     if (log.isLoggable(Level.FINE))
     {
       try
