@@ -18,9 +18,20 @@ MrGeo Geoserve Plugin uses [Apache Maven](http://maven.apache.org/) for a build 
 
 Here are the version variables that may need to be set according to your particular build situation.  They can be set by adding `-D<variable>=<value>` to the maven build line.
 
- | Variable | Default Value | Notes |
- | -------- | ------------- | ----- |
 
+| Variable | Default Value | Notes |
+| -------- | ------------- | ----- |
+| final.classifier | cdh5.6.0 | Classifier for the final jar/tar files produced |
+| commons-codec.version | 1.9 | |
+| mrgeo.version | 1.1.0-${final.classifier}-SNAPSHOT | |
+| geoserver.version | 2.8.1 | |
+| geotools.version | 14.0 | |
+| hadoop.yarn.version | 2.6.0-cdh5.6.0 | |
+| httpclient.version | 4.5 | |
+| jai.core.version | 1.1.3 | |
+| jai.imageio.version | 1.1 | |
+| slf4j.version | 1.7.5 | |
+| java.version | 1.7 | |
 
 ## Installing
 
