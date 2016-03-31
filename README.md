@@ -16,6 +16,7 @@ This plugin is intended to be used as part of an existing GeoServer instance.  S
   MRGEO_COMMON_HOME=/usr/local/mrgeo
   MRGEO_CONF_DIR=/usr/local/mrgeo/conf
   HADOOP_CONF_DIR=/usr/local/hadoop/conf
+```
 ..* for Tomcat, add these:
 ```bash
   export MRGEO_COMMON_HOME=/usr/local/mrgeo
