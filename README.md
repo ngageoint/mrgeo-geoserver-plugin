@@ -16,6 +16,22 @@ MrGeo Geoserve Plugin uses [Apache Maven](http://maven.apache.org/) for a build 
 
     % mvn clean package
 
+    <!-- version -->
+    <final.classifier>cdh5.6.0</final.classifier>
+    <!-- 3rd party versions -->
+    <commons-codec.version>1.9</commons-codec.version>
+    <mrgeo.version>1.1.0-${final.classifier}-SNAPSHOT</mrgeo.version>
+    <geoserver.version>2.8.1</geoserver.version>
+    <geotools.version>14.0</geotools.version>
+    <hadoop.yarn.version>2.6.0-cdh5.6.0</hadoop.yarn.version>
+    <httpclient.version>4.5</httpclient.version>
+    <jai.core.version>1.1.3</jai.core.version>
+    <jai.imageio.version>1.1</jai.imageio.version>
+    <slf4j.version>1.7.5</slf4j.version>
+    <!-- other versions -->
+    <java.version>1.7</java.version>
+
+
 ## Installing
 
 1. Make sure these environment variables are available to the web container you are running.  For Tomcat, add them to _TOMCAT_HOME/bin/setenv.sh_. Note: The environment variables should also be available on the classpath as well.
@@ -84,6 +100,22 @@ MrGeo Geoserve Plugin uses [Apache Maven](http://maven.apache.org/) for a build 
   ```
 
 1. That should be it, restart the web container and MrGeo should be integrated with GeoServer
+
+## MrGeo Config Options
+
+The _mrgeo.config_ file is used to supply the MrGeo Plugin with configuration options.  This is a standard Java-style properties file, so values are in <key> = <value> format.
+
+NOTE:  For now, the mrgeo plugin automaticly checks and updates the MrGeo Layers ONCE at startup, no matter what the config options say.  This behaviour may change in the future.
+
+| Name | Default | Description |
+| ---- | ------- | ----------- |
+| enable.update | false | Enable periodic updates to the layers.  If **true**, the plugin will periodically check MrGeo and add or remove layers as needed |
+| update.time | 300 | Seconds to periodically check MrGeo for updated layers |
+| workspace | mrgeo | Workspace name for MrGeo layers |
+| coveragestore | mrgeo | Coverage (store) name for the MrGeo layers |
+| namespace | _workspace_ | Namespace name for the MrGeo layers|
+| user.name | _none_ | User name for accessing MrGeo layers (This is normally not set, as there are no user names/roles set on layers) |
+| user.roles | _none_ | User roles for accessing MrGeo layers (This is normally not set, as there are no user names/roles set on layers) |
 
 ## Contributing
 
