@@ -18,16 +18,16 @@ MrGeo Geoserve Plugin uses [Apache Maven](http://maven.apache.org/) for a build 
 
 ## Installing
 
-1. Make sure these environment variables are available to the web container you are running.  For Tomcat, add them to _TOMCAT_HOME/bin/setenv.sh_
+1. Make sure these environment variables are available to the web container you are running.  For Tomcat, add them to _TOMCAT_HOME/bin/setenv.sh_. Note: The environment variables should also be available on the classpath as well.
 
   * Variables
-```bash
+  ```bash
   MRGEO_COMMON_HOME=/usr/local/mrgeo
   MRGEO_CONF_DIR=/usr/local/mrgeo/conf
   HADOOP_CONF_DIR=/usr/local/hadoop/conf
-```
-  * For Tomcat, add these to _TOMCAT_HOME/bin/setenv.sh_:
-```bash
+  ```
+  * For Tomcat, add these to _TOMCAT_HOME/bin/setenv.sh_.
+  ```bash
   export MRGEO_COMMON_HOME=/usr/local/mrgeo
   export MRGEO_CONF_DIR=/usr/local/mrgeo/conf
   export HADOOP_CONF_DIR=/usr/local/hadoop/conf
@@ -41,14 +41,12 @@ MrGeo Geoserve Plugin uses [Apache Maven](http://maven.apache.org/) for a build 
                        "-XX:NewSize=256m -XX:MaxNewSize=256m " \
                        "-XX:PermSize=256m -XX:MaxPermSize=256m -XX:+DisableExplicitGC"
 
-```
-  Note:  The Java options for CATALINA_OPTS allow for more memory for tomcat to run.  Your milage may vary.  The environment variables should also be available on the classpath as well.
-
+  ```
 1. Take the _gt-mrgeo-1.0-<version>-SNAPSHOT.tar.gz_ file built previously, and unpack it into the geoserver _WEB-INF/lib_ directory.  Care has been taken to exclude any duplicate, but version different, jars used between MrGeo and GeoServer.  However, changes in the various versions of both may have allowed dupliclates to slip in.  The first time unpacking, you may want to make sure none exist.
 
 1. Copy a _mrgeo.config_ into the geoserver _data_ directory.  If you wish to use defaults for all the config options, an empty file can be created.
 
-1. Copy _mrgeo.conf_ to the _MRGEO_CONF_DIR_directory (e.g. _/usr/local/mrgeo/conf_)
+1. Copy _mrgeo.conf_ to the _MRGEO_CONF_DIR_ directory (e.g. _/usr/local/mrgeo/conf_)
   * Modify _mrgeo.conf_ to point to the correct data location
   ```
   image.base = /mrgeo/images
