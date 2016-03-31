@@ -16,21 +16,21 @@ MrGeo Geoserve Plugin uses [Apache Maven](http://maven.apache.org/) for a build 
 
     % mvn clean package
 
-    <!-- version -->
-    <final.classifier>cdh5.6.0</final.classifier>
-    <!-- 3rd party versions -->
-    <commons-codec.version>1.9</commons-codec.version>
-    <mrgeo.version>1.1.0-${final.classifier}-SNAPSHOT</mrgeo.version>
-    <geoserver.version>2.8.1</geoserver.version>
-    <geotools.version>14.0</geotools.version>
-    <hadoop.yarn.version>2.6.0-cdh5.6.0</hadoop.yarn.version>
-    <httpclient.version>4.5</httpclient.version>
-    <jai.core.version>1.1.3</jai.core.version>
-    <jai.imageio.version>1.1</jai.imageio.version>
-    <slf4j.version>1.7.5</slf4j.version>
-    <!-- other versions -->
-    <java.version>1.7</java.version>
+Here are the version variables that may need to be set according to your particular build situation.  They can be set by adding `-D<variable>=<value>` to the maven build line.
 
+ | Variable | Default Value | Notes |
+ | -------- | ------------- | ----- |
+ | final.classifier | cdh5.6.0 | Classifier for the final jar/tar files produced |
+ | commons-codec.version | 1.9 | |
+ | mrgeo.version | 1.1.0-${final.classifier}-SNAPSHOT | |
+ | geoserver.version | 2.8.1 | |
+ | geotools.version | 14.0 | |
+ | hadoop.yarn.version | 2.6.0-cdh5.6.0 | |
+ | httpclient.version | 4.5 | |
+ | jai.core.version | 1.1.3 | |
+ | jai.imageio.version | 1.1 | |
+ | slf4j.version | 1.7.5 | |
+ | java.version | 1.7 | |
 
 ## Installing
 
