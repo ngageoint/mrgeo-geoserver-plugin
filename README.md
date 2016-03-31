@@ -11,13 +11,13 @@ MrGeo Geoserver Plugin licensed under the [GPL v2.0](http://www.gnu.org/licenses
 This plugin is intended to be used as part of an existing GeoServer instance.  Setting up GeoServer is out of the scope of this document.
 
 1. Make sure these environment variables are available to the web container you are running.  For Tomcat, add them to _TOMCAT_HOME/bin/setenv.sh_
-..*
+  *
 ```bash
   MRGEO_COMMON_HOME=/usr/local/mrgeo
   MRGEO_CONF_DIR=/usr/local/mrgeo/conf
   HADOOP_CONF_DIR=/usr/local/hadoop/conf
 ```
-..* for Tomcat, add these:
+  * for Tomcat, add these:
 ```bash
   export MRGEO_COMMON_HOME=/usr/local/mrgeo
   export MRGEO_CONF_DIR=/usr/local/mrgeo/conf
