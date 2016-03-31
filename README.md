@@ -26,7 +26,6 @@ MrGeo Geoserve Plugin uses [Apache Maven](http://maven.apache.org/) for a build 
   MRGEO_CONF_DIR=/usr/local/mrgeo/conf
   HADOOP_CONF_DIR=/usr/local/hadoop/conf
 ```
-
   * For Tomcat, add these to _TOMCAT_HOME/bin/setenv.sh_:
 ```bash
   export MRGEO_COMMON_HOME=/usr/local/mrgeo
@@ -43,9 +42,7 @@ MrGeo Geoserve Plugin uses [Apache Maven](http://maven.apache.org/) for a build 
                        "-XX:PermSize=256m -XX:MaxPermSize=256m -XX:+DisableExplicitGC"
 
 ```
-Note:  The Java options for CATALINA_OPTS allow for more memory for tomcat to run.  Your milage may vary.
-
-The environment variables should also be available on the classpath as well.
+  Note:  The Java options for CATALINA_OPTS allow for more memory for tomcat to run.  Your milage may vary.  The environment variables should also be available on the classpath as well.
 
 1. Take the _gt-mrgeo-1.0-<version>-SNAPSHOT.tar.gz_ file built previously, and unpack it into the geoserver _WEB-INF/lib_ directory.  Care has been taken to exclude any duplicate, but version different, jars used between MrGeo and GeoServer.  However, changes in the various versions of both may have allowed dupliclates to slip in.  The first time unpacking, you may want to make sure none exist.
 
