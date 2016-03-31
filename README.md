@@ -18,6 +18,7 @@ MrGeo Geoserve Plugin uses [Apache Maven](http://maven.apache.org/) for a build 
 
 Here are the version variables that may need to be set according to your particular build situation.  They can be set by adding `-D<variable>=<value>` to the maven build line.
 
+
  | Variable | Default Value | Notes |
  | -------- | ------------- | ----- |
  | final.classifier | cdh5.6.0 | Classifier for the final jar/tar files produced |
