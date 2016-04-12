@@ -36,7 +36,7 @@ import org.mrgeo.data.image.MrsImageDataProvider;
 import org.mrgeo.image.ImageStats;
 import org.mrgeo.image.MrsPyramidMetadata;
 import org.mrgeo.utils.LongRectangle;
-import org.mrgeo.utils.TMSUtils;
+import org.mrgeo.utils.tms.Bounds;
 import org.opengis.coverage.SampleDimensionType;
 import org.opengis.coverage.grid.GridGeometry;
 import org.opengis.referencing.FactoryException;
@@ -199,7 +199,7 @@ private void updateCoverages(Catalog catalog, CoverageStoreInfo csi)
       ci.setNativeName(meta.getPyramid());
       ci.setNativeCoverageName(meta.getPyramid());
 
-      TMSUtils.Bounds bounds = meta.getBounds().getTMSBounds();
+      Bounds bounds = meta.getBounds();
 
       String epsg = "EPSG:4326";
       CoordinateReferenceSystem epsg4326 = CRS.decode(epsg);

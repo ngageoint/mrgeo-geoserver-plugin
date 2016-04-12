@@ -39,9 +39,11 @@ import org.mrgeo.image.MrsImage;
 import org.mrgeo.image.MrsPyramid;
 import org.mrgeo.image.MrsPyramidMetadata;
 import org.mrgeo.image.RasterTileMerger;
-import org.mrgeo.utils.Bounds;
 import org.mrgeo.utils.LongRectangle;
-import org.mrgeo.utils.TMSUtils;
+import org.mrgeo.utils.tms.Bounds;
+import org.mrgeo.utils.tms.Pixel;
+import org.mrgeo.utils.tms.TMSUtils;
+import org.mrgeo.utils.tms.TileBounds;
 import org.opengis.coverage.grid.Format;
 import org.opengis.coverage.grid.GridEnvelope;
 import org.opengis.parameter.GeneralParameterValue;
@@ -63,7 +65,7 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class MrGeoReader extends AbstractGridCoverage2DReader implements GridCoverage2DReader
+class MrGeoReader extends AbstractGridCoverage2DReader implements GridCoverage2DReader
 {
 private static final Logger log = Logging.getLogger("org.mrgeo.gce.MrGeoReader");
 
@@ -72,13 +74,13 @@ final static String USER_ROLES = "user.roles";
 
 private Properties config = new Properties();
 
-ProviderProperties providerProperties = ProviderProperties.fromDelimitedString("");
+private ProviderProperties providerProperties = ProviderProperties.fromDelimitedString("");
 
-Set<String> layers = new HashSet<>();
+private Set<String> layers = new HashSet<>();
 
-CoordinateReferenceSystem epsg4326 = null;
+private CoordinateReferenceSystem epsg4326 = null;
 
-public MrGeoReader(Properties config) throws IOException
+MrGeoReader(Properties config) throws IOException
 {
   this.config = config;
 
@@ -187,18 +189,18 @@ public GridCoverage2D read(String name, GeneralParameterValue[] parameters) thro
   final MrsPyramidMetadata meta = dp.getMetadataReader().read();
 
   final int tilesize = meta.getTilesize();
-  final TMSUtils.Bounds bounds;
+  Bounds bounds;
   int zoom;
 
   if (requestedEnvelope == null)
   {
     log.fine("No envelope given, calculating bounds");
-    bounds = meta.getBounds().getTMSBounds();
+    bounds = meta.getBounds();
     zoom = meta.getMaxZoomLevel();
   }
   else
   {
-    bounds = TMSUtils.limit(new TMSUtils.Bounds(requestedEnvelope.getMinX(), requestedEnvelope.getMinY(), requestedEnvelope.getMaxX(), requestedEnvelope.getMaxY()));
+    bounds = TMSUtils.limit(new Bounds(requestedEnvelope.getMinX(), requestedEnvelope.getMinY(), requestedEnvelope.getMaxX(), requestedEnvelope.getMaxY()));
 
     double pw = bounds.width() / dim.getWidth();
     double ph = bounds.height() / dim.getHeight();
@@ -223,19 +225,19 @@ public GridCoverage2D read(String name, GeneralParameterValue[] parameters) thro
 
   try
   {
-    TMSUtils.TileBounds tb = TMSUtils.boundsToTile(bounds, zoom, tilesize);
+    TileBounds tb = TMSUtils.boundsToTile(bounds, zoom, tilesize);
     log.fine("Tile Bounds: " + tb.toString());
 
     Raster merged = RasterTileMerger.mergeTiles(image, tb);
 
-    TMSUtils.Bounds actualBounds = TMSUtils.tileToBounds(tb, zoom, tilesize);
+    Bounds actualBounds = TMSUtils.tileToBounds(tb, zoom, tilesize);
 
-    TMSUtils.Pixel requestedUL =
+    Pixel requestedUL =
         TMSUtils.latLonToPixelsUL(bounds.n, bounds.w, zoom, tilesize);
-    TMSUtils.Pixel requestedLR =
+    Pixel requestedLR =
         TMSUtils.latLonToPixelsUL(bounds.s, bounds.e, zoom, tilesize);
 
-    TMSUtils.Pixel actualUL =
+    Pixel actualUL =
         TMSUtils.latLonToPixelsUL(actualBounds.n, actualBounds.w, zoom, tilesize);
 //      TMSUtils.Pixel actualLR =
 //          TMSUtils.latLonToPixelsUL(actualBounds.s, actualBounds.e, zoomLevel, tilesize);
@@ -252,24 +254,27 @@ public GridCoverage2D read(String name, GeneralParameterValue[] parameters) thro
     if (offsetX < 0)
     {
       offsetX = 0;
-      bounds.w = actualBounds.w;
+      bounds = new Bounds(actualBounds.w, bounds.s, bounds.e, bounds.n);
     }
 
     if (offsetY < 0)
     {
       offsetY = 0;
-      bounds.n = actualBounds.n;
+      bounds = new Bounds(bounds.w, bounds.s, bounds.e, actualBounds.n);
+
     }
 
     if (offsetX + croppedW > merged.getWidth())
     {
-      bounds.e = actualBounds.e;
+      bounds = new Bounds(bounds.w, bounds.s, actualBounds.e, bounds.n);
+
       croppedW = merged.getWidth() - offsetX;
     }
 
     if (offsetY + croppedH > merged.getHeight())
     {
-      bounds.s = actualBounds.s;
+      bounds = new Bounds(bounds.w, actualBounds.s, bounds.e, bounds.n);
+
       croppedH = merged.getHeight() - offsetY;
     }
 
@@ -404,8 +409,8 @@ public GeneralEnvelope getOriginalEnvelope(String name)
 
     Bounds bounds = meta.getBounds();
 
-    final GeneralEnvelope envelope = new GeneralEnvelope(new double[] { bounds.getMinX(), bounds.getMinY() },
-        new double[] { bounds.getMaxX(), bounds.getMaxY()});
+    final GeneralEnvelope envelope = new GeneralEnvelope(new double[] { bounds.w, bounds.s },
+        new double[] { bounds.e, bounds.n});
     envelope.setCoordinateReferenceSystem(epsg4326);
 
     log.fine("Envelope for: " + name + " is " + envelope.toString());
@@ -466,7 +471,7 @@ public Set<ParameterDescriptor<List>> getDynamicParameters(String name) throws I
     throw new IllegalArgumentException("The specified coverage " + name + "is not found");
   }
 
-  return new HashSet<ParameterDescriptor<List>>();
+  return new HashSet<>();
 }
 
 @Override
@@ -558,7 +563,6 @@ public ImageLayout getImageLayout(String name) throws IOException
       {
         ((Closeable) it).close();
         r.close();
-        r = null;
       }
     }
 

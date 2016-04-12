@@ -56,10 +56,32 @@
       <name>Boundless Maven Repository</name>
       <url>http://repo.boundlessgeo.com/main</url>
     </repository>
+    <repository>
+      <id>mrgeo-maven-release</id>
+      <name>MrGeo AWS Release Repository</name>
+      <url>http://mrgeo-maven.s3-website-us-east-1.amazonaws.com/release</url>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+    <repository>
+      <id>mrgeo-maven-snapshot</id>
+      <name>MrGeo AWS Snapshot Repository</name>
+      <url>http://mrgeo-maven.s3-website-us-east-1.amazonaws.com/snapshot</url>
+      <releases>
+        <enabled>false</enabled>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>
   </repositories>
   <build>
     <finalName>gt-mrgeo-${project.version}-${mrgeo.version}</finalName>
-        <extensions>
+    <extensions>
       <extension>
         <groupId>org.springframework.build</groupId>
         <artifactId>aws-maven</artifactId>
