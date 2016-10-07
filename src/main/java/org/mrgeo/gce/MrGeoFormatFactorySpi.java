@@ -30,7 +30,6 @@ import org.geotools.util.logging.Logging;
 import org.mrgeo.core.MrGeoConstants;
 import org.mrgeo.core.MrGeoProperties;
 import org.mrgeo.hdfs.utils.HadoopFileUtils;
-import org.mrgeo.utils.LoggingUtils;
 
 import java.awt.*;
 import java.io.File;
