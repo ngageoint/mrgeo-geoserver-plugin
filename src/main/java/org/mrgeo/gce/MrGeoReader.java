@@ -34,11 +34,11 @@ import org.mrgeo.data.DataProviderFactory;
 import org.mrgeo.data.ProviderProperties;
 import org.mrgeo.data.image.MrsImageDataProvider;
 import org.mrgeo.data.image.MrsImageReader;
+import org.mrgeo.data.raster.MrGeoRaster;
 import org.mrgeo.data.raster.RasterUtils;
 import org.mrgeo.image.MrsImage;
 import org.mrgeo.image.MrsPyramid;
 import org.mrgeo.image.MrsPyramidMetadata;
-import org.mrgeo.image.RasterTileMerger;
 import org.mrgeo.utils.LongRectangle;
 import org.mrgeo.utils.tms.Bounds;
 import org.mrgeo.utils.tms.Pixel;
@@ -57,7 +57,6 @@ import javax.media.jai.ImageLayout;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.Raster;
-import java.awt.image.WritableRaster;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.*;
@@ -228,7 +227,7 @@ public GridCoverage2D read(String name, GeneralParameterValue[] parameters) thro
     TileBounds tb = TMSUtils.boundsToTile(bounds, zoom, tilesize);
     log.fine("Tile Bounds: " + tb.toString());
 
-    Raster merged = RasterTileMerger.mergeTiles(image, tb);
+    MrGeoRaster merged = image.getRaster(tb);
 
     Bounds actualBounds = TMSUtils.tileToBounds(tb, zoom, tilesize);
 
@@ -264,37 +263,36 @@ public GridCoverage2D read(String name, GeneralParameterValue[] parameters) thro
 
     }
 
-    if (offsetX + croppedW > merged.getWidth())
+    if (offsetX + croppedW > merged.width())
     {
       bounds = new Bounds(bounds.w, bounds.s, actualBounds.e, bounds.n);
 
-      croppedW = merged.getWidth() - offsetX;
+      croppedW = merged.width() - offsetX;
     }
 
-    if (offsetY + croppedH > merged.getHeight())
+    if (offsetY + croppedH > merged.height())
     {
       bounds = new Bounds(bounds.w, actualBounds.s, bounds.e, bounds.n);
 
-      croppedH = merged.getHeight() - offsetY;
+      croppedH = merged.height() - offsetY;
     }
 
-    log.fine("Raw raster: x: " + merged.getMinX() + " y: " + merged.getMinY() + " w: " + merged.getWidth() + " h: " +
-        merged.getHeight());
+    log.fine("Raw raster: x: " + 0 + " y: " + 0 + " w: " + merged.width() + " h: " +
+        merged.height());
 
     log.fine("Cropping to: x: " + offsetX + " y: " + offsetY + " w: " + croppedW + " h: " + croppedH);
 
-    final WritableRaster cropped = merged.createCompatibleWritableRaster(croppedW, croppedH);
-    cropped.setDataElements(0, 0, croppedW, croppedH, merged.getDataElements(offsetX, offsetY, croppedW, croppedH, null));
+    final MrGeoRaster cropped = merged.clip(offsetX, offsetY, croppedW, croppedH);
 
     log.fine(
-        "Cropped raster: x: " + cropped.getMinX() + " y: " + cropped.getMinY() + " w: " + cropped.getWidth() + " h: " +
-            cropped.getHeight());
+        "Cropped raster: x: " + 0 + " y: " + 0 + " w: " + cropped.width() + " h: " +
+            cropped.height());
 
     final GeneralEnvelope envelope = new GeneralEnvelope(new double[] { bounds.w, bounds.s },
         new double[] { bounds.e, bounds.n});
     envelope.setCoordinateReferenceSystem(epsg4326);
 
-    final BufferedImage img = RasterUtils.makeBufferedImage(cropped);
+    final BufferedImage img = RasterUtils.makeBufferedImage(cropped.toRaster());
 
     final GridCoverageFactory factory = CoverageFactoryFinder.getGridCoverageFactory(null);
     return factory.create(pyramid.getName(), img, envelope);
@@ -549,10 +547,10 @@ public ImageLayout getImageLayout(String name) throws IOException
 
     MrsImageReader r = dp.getMrsTileReader(meta.getMaxZoomLevel());
 
-    final Iterator<Raster> it = r.get();
+    final Iterator<MrGeoRaster> it = r.get();
     try
     {
-      Raster raster = it.next();
+      Raster raster = it.next().toRaster();
 
       layout.setColorModel(RasterUtils.createColorModel(raster));
       layout.setSampleModel(raster.getSampleModel());
