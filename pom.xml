@@ -20,10 +20,10 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.mrgeo</groupId>
   <artifactId>mrgeo-geoserver</artifactId>
-  <version>1.0</version>
+  <version>1.1</version>
   <properties>
     <!-- version -->
-    <final.classifier>emr4.5.0</final.classifier>
+    <final.classifier>emr4.7.1</final.classifier>
     <!-- 3rd party versions -->
     <commons-codec.version>1.9</commons-codec.version>
     <mrgeo.version>1.2.0-${final.classifier}-SNAPSHOT</mrgeo.version>
