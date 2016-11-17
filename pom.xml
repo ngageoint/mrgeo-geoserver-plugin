@@ -342,4 +342,16 @@
     </dependency>
     <!--  -->
   </dependencies>
+  <profiles>
+    <profile>
+      <id>enable-s3a</id>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-aws</artifactId>
+          <version>${hadoop.yarn.version}</version>
+        </dependency>
+      </dependencies>
+    </profile>
+  </profiles>
 </project>
