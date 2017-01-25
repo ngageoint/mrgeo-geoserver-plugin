@@ -1,0 +1,5 @@
+image.base = s3://mrgeo/images
+vector.base = s3://mrgeo/vectors
+kml.base = s3://mrgeo/kml
+tsv.base = s3://mrgeo/tsv
+colorscale.base = s3://mrgeo/color-scales
