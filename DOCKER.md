@@ -12,6 +12,13 @@ docker build . -t mrgeo-geoserver-plugin:latest
 docker run -p 8080:8080 --name=mrgeo_geoserver_plugin mrgeo-geoserver-plugin:latest
 ```
 
+## Run a shell in the container
+
+```
+docker exec -i -t mrgeo_geoserver_plugin /bin/bash
+```
+
+
 ## Remove container
 
 ```
