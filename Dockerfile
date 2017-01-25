@@ -65,6 +65,34 @@ RUN \
   cd /usr/local/src/mrgeo-geoserver-plugin && \
   mvn package
 
+RUN apt-get install unzip -y
+
+RUN \
+  cd /tmp && \
+  wget -O geoserver-2.9.0-war.zip https://downloads.sourceforge.net/project/geoserver/GeoServer/2.9.0/geoserver-2.9.0-war.zip && \
+  unzip geoserver-2.9.0-war.zip && \
+  mv geoserver.war /usr/local/tomcat/webapps && \
+  rm geoserver-2.9.0-war.zip && \
+  cd /usr/local/tomcat/webapps && \
+  unzip geoserver.war -d geoserver && \
+  rm geoserver.war
+
+
+RUN \
+  mkdir -p $MRGEO_CONF_DIR && \
+  mkdir -p $GEOSERVER_DATA_DIR && \
+  mkdir -p $GEOWEBCACHE_CACHE_DIR && \
+  mkdir -p $HADOOP_CONF_DIR
+
+COPY conf/mrgeo/mrgeo.conf.example $MRGEO_CONF_DIR
+
+COPY conf/hadoop/* $HADOOP_CONF_DIR/
+
+RUN \
+  cd /usr/local/src/mrgeo-geoserver-plugin/target/gt-mrgeo-1.1-1.2.0-emr4.7.1-SNAPSHOT && \
+  cp * /usr/local/tomcat/webapps/geoserver/WEB-INF/lib
+
+COPY conf/tomcat/tomcat-users.xml /usr/local/tomcat/conf 
 
 EXPOSE 8080
 CMD ["catalina.sh", "run"]
