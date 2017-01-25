@@ -92,7 +92,7 @@ RUN \
   cd /usr/local/src/mrgeo-geoserver-plugin/target/gt-mrgeo-1.1-1.2.0-emr4.7.1-SNAPSHOT && \
   cp * /usr/local/tomcat/webapps/geoserver/WEB-INF/lib
 
-COPY conf/tomcat/tomcat-users.xml /usr/local/tomcat/conf 
+COPY conf/tomcat/* /usr/local/tomcat/conf/
 
 EXPOSE 8080
 CMD ["catalina.sh", "run"]
